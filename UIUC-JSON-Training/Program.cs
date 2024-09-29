@@ -1,4 +1,5 @@
-﻿using System.CommandLine;
+﻿using System.Collections.Generic;
+using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Parsing;
 using System.Text;
@@ -8,7 +9,7 @@ using UIUC_JSON_Training.Classes;
 internal class Program
 {
     // Internal list of unique trainings.
-    internal static List<Training> Trainings = new List<Training>();
+    static Dictionary<string, Training> TrainingDict = new Dictionary<string, Training>();
 
     /// <summary>
     /// Write errors to the console with red text.
@@ -76,7 +77,7 @@ internal class Program
         };
 
         // Handle the command with the OnHandleArgs function.
-        rootCommand.SetHandler<string, string, string, int, List<string>>(OnHandleArgs, trainingDataOption, outputDirectoryOption, expiryThresholdDateOption, fiscalYearOption, trainingListOption);
+        rootCommand.SetHandler<string, string, string, int, List<string>>(OnHandleArgsAsync, trainingDataOption, outputDirectoryOption, expiryThresholdDateOption, fiscalYearOption, trainingListOption);
 
         // Execute the command.
         var commandLineBuilder = new CommandLineBuilder( rootCommand ).UseDefaults();
@@ -91,7 +92,7 @@ internal class Program
     /// <param name="expiryThresholdDate">"Expires soon" threshold date.</param>
     /// <param name="fiscalYear">The fiscal year.</param>
     /// <param name="trainingList">The list of training programs to be checked.</param>
-    private static void OnHandleArgs(string trainingDataPath, string outputDirectory, string expiryThresholdDate, int fiscalYear, List<string>trainingList)
+    private static async Task OnHandleArgsAsync(string trainingDataPath, string outputDirectory, string expiryThresholdDate, int fiscalYear, List<string>trainingList)
     {
         // Validate the input file path.
         if (!File.Exists(trainingDataPath))
@@ -118,10 +119,13 @@ internal class Program
         Console.WriteLine($"Threshold date: {expiryDate.ToShortDateString()}");
         Console.WriteLine($"Fiscal year: {fiscalYear}");
 
+        List<Training> specifiedTrainings = new List<Training>();
+
         // List all of the trainings.
         StringBuilder trainingBuilder = new StringBuilder();
         for (int i = 0; i < trainingList.Count; i++)
         {
+            specifiedTrainings.Add(new Training(trainingList[i]));
             trainingBuilder.Append(trainingList[i]);
 
             // Append commas and spaces for readability.
@@ -153,8 +157,10 @@ internal class Program
                 return;
             }
 
-             // Generate the output data.
-             ListCompletedTrainingsWithCounts(people, outputDirectory);
+            // Generate the output data.
+            UpdateTrainingDictionary(people);
+            await ListCompletedTrainingsWithCountsAsync(people, outputDirectory);
+            await ListGraduatesForYearAsync(outputDirectory, fiscalYear, specifiedTrainings);
         }
         catch (Exception ex)
         {
@@ -164,48 +170,50 @@ internal class Program
     }
 
     /// <summary>
-    /// Requirement: List each completed training with a count of how many people have completed that training.
+    /// Update the global training dictionary to create a lookup
+    /// of people who have graduated from a course.
     /// </summary>
-    /// <param name="trainingList">JSON training data.</param>
-    /// <param name="outputDirectory">Output directory.</param>
-    public static void ListCompletedTrainingsWithCounts(List<Person> people, string outputDirectory)
+    /// <param name="people">lList of people from input.</param>
+    public static void UpdateTrainingDictionary(List<Person> people)
     {
-        // Dictionary to track unique trainings and their completion counts.
-        // The string is the completion training name from the JSON data.
-        Dictionary<string, Training> trainingDict = new Dictionary<string, Training>();
-
-        // Loop through each person and their completions.
         foreach (Person person in people)
         {
             foreach (Completion completion in person.Completions)
             {
                 Training training;
+
                 // Check if the training already exists in the dictionary.
-                if (!trainingDict.TryGetValue(completion.Name, out training))
+                if (!TrainingDict.TryGetValue(completion.Name, out training))
                 {
-                    // If it does not exist, create a new Training object and add it to the dictionary.
                     training = new Training(completion.Name);
-                    trainingDict[completion.Name] = training;
+                    TrainingDict[completion.Name] = training;
                 }
 
+                // Create a reverse lookup for trainings.
+                completion.TrainingClass = training;
                 training.IncrementCountForGraduate(person);
             }
         }
-
-        // Clear the existing Trainings list and populate it with unique trainings.
-        Trainings.Clear();
-        Trainings.AddRange(trainingDict.Values);
+    }
 
 
-        // Prepare the output data structure.
-        var outputData = new List<object>();
+    /// <summary>
+    /// Requirement: List each completed training with a count of how many people have completed that training.
+    /// </summary>
+    /// <param name="people">List of people.</param>
+    /// <param name="outputDirectory">Output directory.</param>
+    public static async Task ListCompletedTrainingsWithCountsAsync(List<Person> people, string outputDirectory)
+    {
+        // Prepare the output data.
+        List<object> outputData = new List<object>();
 
-        foreach (Training training in Trainings)
+        // Iterate through the existing TrainingDict to get counts.
+        foreach (Training training in TrainingDict.Values)
         {
             outputData.Add(new
             {
                 Name = training.Name,
-                Count = training.Graduates.Count,
+                Count = training.GetGraduateCount(), // Directly get the count from the Training object
             });
         }
 
@@ -216,12 +224,95 @@ internal class Program
         });
 
         // Define the output file path.
-        string outputFilePath = Path.Combine(outputDirectory, "CompletedTrainings.json");
+        string outputFilePath = Path.Combine(outputDirectory, "CompletedTrainingsWithCounts.json");
 
         // Write the JSON to a file.
-        File.WriteAllText(outputFilePath, jsonOutput);
+        await File.WriteAllTextAsync(outputFilePath, jsonOutput);
 
-        // Optional: Print a confirmation message.
         Console.WriteLine($"Output written to: {outputFilePath}");
     }
+
+    /// <summary>
+    /// Requirement: Given a list of trainings and a fiscal year,
+    /// for each specified training, list all people that completed
+    /// that training in the specified fiscal year.
+    /// </summary>
+    /// <param name="outputDirectory">Output directory.</param>
+    /// <param name="fiscalYear">Year the training was completed. Defined as 7/1/n-1 – 6/30/n.</param>
+    /// <param name="specifiedTrainings">List of specified trainings.</param>
+    public static async Task ListGraduatesForYearAsync(string outputDirectory, int fiscalYear, List<Training> specifiedTrainings)
+    {
+        // Define the date range for the fiscal year.
+        DateOnly fiscalYearStart = new DateOnly(fiscalYear - 1, 7, 1);
+        DateOnly fiscalYearEnd = new DateOnly(fiscalYear, 6, 30);
+
+        // Prepare the output data.
+        var outputData = new List<object>();
+
+        // Iterate over the specified trainings.
+        foreach (Training specifiedTraining in specifiedTrainings)
+        {
+            if (TrainingDict.TryGetValue(specifiedTraining.Name, out Training training))
+            {
+                // Use HashSet to avoid duplicates.
+                HashSet<string> graduatesOfTraining = new HashSet<string>();
+
+                // Now check each graduate's completions for this training.
+                foreach (var graduate in training.Graduates)
+                {
+                    // Use LINQ to filter for completions within the fiscal year and for the specific training.
+                    // "c" represents a completion object within a graduate.
+                    bool bCompletedInFiscalYear = graduate.Completions.Any
+                    (
+                        c => c.Name == training.Name
+                        && c.Timestamp >= fiscalYearStart
+                        && c.Timestamp <= fiscalYearEnd
+                    );
+
+                    // Add the graduate's name if they completed the training within the fiscal year.
+                    if (bCompletedInFiscalYear)
+                    {
+                        graduatesOfTraining.Add(graduate.Name);
+                    }
+                }
+
+                // Add this training and its graduates to the output data.
+                outputData.Add(new
+                {
+                    Training = training.Name,
+                    Graduates = graduatesOfTraining.ToList()  // Convert HashSet to List for serialization.
+                });
+            }
+        }
+
+        // Serialize the data to JSON.
+        string jsonOutput = JsonSerializer.Serialize(outputData, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        });
+
+        // Define the output file path.
+        string outputFilePath = Path.Combine(outputDirectory, $"GraduatesFiscalYear{fiscalYear}.json");
+
+        // Write the file.
+        await File.WriteAllTextAsync(outputFilePath, jsonOutput);
+
+        Console.WriteLine($"Graduate list for fiscal year {fiscalYear} written to: {outputFilePath}");
+    }
+
+    /// <summary>
+    /// Requirement: Given a date, find all people that have any completed trainings
+    /// that have already expired, or will expire within one month of the specified date.
+    /// A training is considered expired the day after its expiration date.
+    /// For each person found, list each completed training that met the previous criteria,
+    /// with an additional field to indicate expired vs expires soon.
+    /// </summary>
+    /// <param name="expiryDate">The date to consider courses expired.</param>
+    /// <param name="outputDirectory">Output directory.</param>
+    /// <returns></returns>
+    public static async Task ListPeopleWithExpiredCoursesAsync(DateOnly expiryDate, string outputDirectory)
+    {
+
+    }
+
 }

@@ -18,5 +18,9 @@ namespace UIUC_JSON_Training.Classes
         // Null implies that it never expires.
         [JsonConverter(typeof(DateOnlyConverter))]
         public DateOnly? Expires { get; set; }
+
+        // A link to the object for the completed course.
+        [NonSerialized()]
+        public Training TrainingClass;
     }
 }
