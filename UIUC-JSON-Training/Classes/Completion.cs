@@ -1,4 +1,6 @@
-﻿namespace UIUC_JSON_Training.Classes
+﻿using System.Text.Json.Serialization;
+
+namespace UIUC_JSON_Training.Classes
 {
     /// <summary>
     /// A class representing a completed training module.
@@ -6,13 +8,15 @@
     internal class Completion
     {
         // Name of completed training.
-        private string Name {  get; set; }
+        public string Name {  get; set; }
 
         // Date of completion.
-        private DateTime Timestamp { get; set; }
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateOnly Timestamp { get; set; }
 
         // When the completion is no longer considered valid.
         // Null implies that it never expires.
-        private DateTime? Expires { get; set; }
+        [JsonConverter(typeof(DateOnlyConverter))]
+        public DateOnly? Expires { get; set; }
     }
 }
