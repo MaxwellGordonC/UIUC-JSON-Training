@@ -10,7 +10,7 @@ This is a small, modular, and efficient C# application made to fulfill the follo
     - Use date: Oct 1st, 2023
 -  A note for all tasks. It is possible for a person to have completed the same training more than once. In this event, only the most recent completion should be considered.
 
-Requirements for the above application:
+### Requirements for the above application:
 1. The app should work with any data in the specified format.
 2. The app should be checked into a publicly accessible Github or Azure Devops repository that the reviewers can pull and run, without any modification.
 3. In addition to the application code, your repository should contain the three output .Json files.
