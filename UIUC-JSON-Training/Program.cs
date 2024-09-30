@@ -17,8 +17,19 @@ internal class Program
     const int FISCAL_YEAR_END_MONTH = 6;
     const int FISCAL_YEAR_END_DAY = 30;
 
+    const string EXPIRED_MESSAGE = "Expired";
+    const string EXPIRES_SOON_MESSAGE = "Expires soon";
+
     // Internal list of unique trainings.
     static Dictionary<string, Training> TrainingDict = new Dictionary<string, Training>();
+
+    // Status of a training course.
+    public enum ExpiryStatus
+    {
+        Expired,
+        ExpiringSoon,
+        NotExpired
+    }
 
     /// <summary>
     /// Write errors to the console with red text.
@@ -170,6 +181,7 @@ internal class Program
             UpdateTrainingDictionary(people);
             await ListCompletedTrainingsWithCountsAsync(people, outputDirectory);
             await ListGraduatesForYearAsync(outputDirectory, fiscalYear, specifiedTrainings);
+            await ListPeopleWithExpiredCoursesAsync(people, expiryDate, outputDirectory);
         }
         catch (Exception ex)
         {
@@ -256,7 +268,7 @@ internal class Program
         DateOnly fiscalYearEnd = new DateOnly(fiscalYear, FISCAL_YEAR_END_MONTH, FISCAL_YEAR_END_DAY);
 
         // Prepare the output data.
-        var outputData = new List<object>();
+        List<object> outputData = new List<object>();
 
         // Iterate over the specified trainings.
         foreach (Training specifiedTraining in specifiedTrainings)
@@ -289,7 +301,7 @@ internal class Program
                 outputData.Add(new
                 {
                     Training = training.Name,
-                    Graduates = graduatesOfTraining.ToList()  // Convert HashSet to List for serialization.
+                    Graduates = graduatesOfTraining.ToList()
                 });
             }
         }
@@ -309,6 +321,41 @@ internal class Program
         Console.WriteLine($"Graduate list for fiscal year {fiscalYear} written to: {outputFilePath}");
     }
 
+
+    /// <summary>
+    /// Gets the expiry status for a completion.
+    /// </summary>
+    /// <param name="completion">Completion training to be checked.</param>
+    /// <param name="referenceDate">Date to check against.</param>
+    /// <returns>The expiry status.</returns>
+    public static ExpiryStatus GetExpiryStatus(Completion completion, DateOnly referenceDate)
+    {
+        // If no expiration is given, it never expires.
+        if (completion.Expires is null)
+        {
+            return ExpiryStatus.NotExpired;
+        }
+
+        // Cast, since completion.Expires is a DateOnly?. 
+        DateOnly expirationDate = (DateOnly)completion.Expires;
+
+        if (expirationDate < referenceDate)
+        {
+            // The expiration date is less than the reference date, meaning it has already passed.
+            return ExpiryStatus.Expired;
+        }
+        else if (expirationDate <= referenceDate.AddMonths(1))
+        {
+            // The expiration date is within one month.
+            return ExpiryStatus.ExpiringSoon;
+        }
+        else
+        {
+            return ExpiryStatus.NotExpired;
+        }
+    }
+
+
     /// <summary>
     /// Requirement: Given a date, find all people that have any completed trainings
     /// that have already expired, or will expire within one month of the specified date.
@@ -316,18 +363,72 @@ internal class Program
     /// For each person found, list each completed training that met the previous criteria,
     /// with an additional field to indicate expired vs expires soon.
     /// </summary>
+    /// <param name="people">The people from the training data.</param>
     /// <param name="expiryDate">The date to consider courses expired.</param>
     /// <param name="outputDirectory">Output directory.</param>
-    public static async Task ListPeopleWithExpiredCoursesAsync(DateOnly expiryDate, string outputDirectory)
+    public static async Task ListPeopleWithExpiredCoursesAsync(List<Person> people, DateOnly expiryDate, string outputDirectory)
     {
-        /**
-         * for each person
-         *  for each completoin
-         *      if expiry date is expired
-         *          add training to a list of expired trainings
-         *      else if date is a month away from expiring
-         *          add training to a list of almost expired trainings
-         */
-    }
+        // Prepare the output data structure.
+        List<object> outputData = new List<object>();
 
+        // Look through each person to find expired trainings.
+        foreach (Person person in people)
+        {
+            // Early exit if no completions exist.
+            if (person.Completions.Count == 0)
+            {
+                continue;
+            }
+
+            // Create a new entry for this person.
+            var personEntry = new
+            {
+                Name = person.Name,
+                Trainings = new List<ExpiredTraining>()
+            };
+
+            // Check each completion for expiration.
+            foreach (Completion completion in person.Completions)
+            {
+                // Get the status.
+                ExpiryStatus status = GetExpiryStatus(completion, expiryDate);
+
+                // Ignore it if it's not expired.
+                if (status == ExpiryStatus.NotExpired)
+                {
+                    continue;
+                }
+
+                // Set the message for the JSON output.
+                string expiryMessage = status == ExpiryStatus.Expired ? EXPIRED_MESSAGE : EXPIRES_SOON_MESSAGE;
+
+                // Now add it to the list.
+                personEntry.Trainings.Add(new ExpiredTraining
+                {
+                    Training = completion.Name,
+                    Expires = expiryMessage
+                });
+            }
+
+            // Only add the person entry if they have any trainings.
+            if (personEntry.Trainings.Count > 0)
+            {
+                outputData.Add(personEntry);
+            }
+        }
+
+        // Serialize the data to JSON.
+        string jsonOutput = JsonSerializer.Serialize(outputData, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        });
+
+        // Define the output file path.
+        string outputFilePath = Path.Combine(outputDirectory, $"ExpiredTrainings{expiryDate.Month}_{expiryDate.Day}_{expiryDate.Year}.json");
+
+        // Write the file.
+        await File.WriteAllTextAsync(outputFilePath, jsonOutput);
+
+        Console.WriteLine($"Expired training list for {expiryDate} written to: {outputFilePath}");
+    }
 }
