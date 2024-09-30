@@ -63,6 +63,7 @@ internal class Program
         Console.ResetColor();
     }
 
+
     /// <summary>
     /// Mainline. Get the commandline arguments, and then process them.
     /// </summary>
@@ -71,40 +72,45 @@ internal class Program
     public static async Task<int> Main(string[] args)
     {
         // Define the arguments with their descriptions.
+        // If an argument is not provided, a default will be used.
         var trainingDataOption = new Option<string>
         (
             "--trainingData",
-            description: "Path to the training JSON data file"
-        )
-        { IsRequired = true };
+            description: "Path to the training JSON data file",
+            // If none is provided, use the current execution path assuming an "input" folder.
+            getDefaultValue: () => Path.Combine(AppContext.BaseDirectory, "input", "trainings.json")
+
+        );
 
         var outputDirectoryOption = new Option<string>
         (
             "--outputDirectory",
-            description: "The directory where the output data will be generated."
-        )
-        { IsRequired = true };
+            description: "The directory where the output data will be generated.",
+            // If none is provided, use the output folder relative to the execution path.
+            getDefaultValue: () => Path.Combine(AppContext.BaseDirectory, "output")
+        );
 
         var expiryThresholdDateOption = new Option<string>
         (
             "--expiryThresholdDate",
-            description: "Expiration threshold date in MM/DD/YYYY format"
-        )
-        { IsRequired = true };
+            description: "Expiration threshold date in MM/DD/YYYY format",
+            getDefaultValue: () => "10/01/2023"
+        );
 
         var fiscalYearOption = new Option<int>
         (
             "--fiscalYear",
-            description: "Fiscal year that trainings have been completed in"
-        )
-        { IsRequired = true };
+            description: "Fiscal year that trainings have been completed in",
+            getDefaultValue: () => 2024
+        );
 
         var trainingListOption = new Option<List<string>>
         (
             "--trainingList",
-            description: "List of space-separated required trainings (e.g., \"Electrical Safety for Labs\" \"X-Ray Safety\")"
+            description: "List of space-separated required trainings (e.g., \"Electrical Safety for Labs\" \"X-Ray Safety\")",
+            getDefaultValue: () => new List<string> { "Electrical Safety for Labs", "X-Ray Safety", "Laboratory Safety Training" }
         )
-        { IsRequired = true, AllowMultipleArgumentsPerToken = true };
+        { AllowMultipleArgumentsPerToken = true };
 
 
         // Create the root command.
@@ -158,7 +164,7 @@ internal class Program
         // Give feedback in the console as to what is being processed.
         WriteInfo("Processing file: ");
         Console.WriteLine(trainingDataPath);
-
+        
         WriteInfo("Output directory: ");
         Console.WriteLine(outputDirectory);
 

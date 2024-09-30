@@ -2,7 +2,6 @@
   "profiles": {
     "UIUC-JSON-Training": {
       "commandName": "Project",
-      "commandLineArgs": "--trainingData=\"G:\\Applications\\GitHub\\UIUC-JSON-Training\\input\\trainings.json\"\r\n--expiryThresholdDate=\"10/01/2023\"\r\n--fiscalYear=2024\r\n--trainingList=\"Electrical Safety for Labs\" \"X-Ray Safety\" \"Laboratory Safety Training\"\r\n--outputDirectory=\"G:\\Applications\\GitHub\\UIUC-JSON-Training\\output\\\\\"",
       "hotReloadEnabled": true
     }
   }
