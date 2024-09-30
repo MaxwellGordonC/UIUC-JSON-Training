@@ -77,9 +77,8 @@ internal class Program
         (
             "--trainingData",
             description: "Path to the training JSON data file",
-            // If none is provided, use the current execution path assuming an "input" folder.
-            getDefaultValue: () => Path.Combine(AppContext.BaseDirectory, "input", "trainings.json")
-
+            // If none is provided, use the relative execution path to the input folder.
+            getDefaultValue: () => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..\\..\\..\\..\\input", "trainings.json"))
         );
 
         var outputDirectoryOption = new Option<string>
@@ -87,7 +86,7 @@ internal class Program
             "--outputDirectory",
             description: "The directory where the output data will be generated.",
             // If none is provided, use the output folder relative to the execution path.
-            getDefaultValue: () => Path.Combine(AppContext.BaseDirectory, "output")
+            getDefaultValue: () => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..\\..\\..\\..\\output"))
         );
 
         var expiryThresholdDateOption = new Option<string>
