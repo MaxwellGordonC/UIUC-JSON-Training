@@ -8,6 +8,15 @@ using UIUC_JSON_Training.Classes;
 
 internal class Program
 {
+    // Defines the start and end of a fiscal year.
+    // The command arguments library used in this project
+    // is limited to 8 arguments, so I opted for constants,
+    // Especially since these dates are unlikely to change.
+    const int FISCAL_YEAR_START_MONTH = 7;
+    const int FISCAL_YEAR_START_DAY = 1;
+    const int FISCAL_YEAR_END_MONTH = 6;
+    const int FISCAL_YEAR_END_DAY = 30;
+
     // Internal list of unique trainings.
     static Dictionary<string, Training> TrainingDict = new Dictionary<string, Training>();
 
@@ -77,7 +86,7 @@ internal class Program
         };
 
         // Handle the command with the OnHandleArgs function.
-        rootCommand.SetHandler<string, string, string, int, List<string>>(OnHandleArgsAsync, trainingDataOption, outputDirectoryOption, expiryThresholdDateOption, fiscalYearOption, trainingListOption);
+        rootCommand.SetHandler(OnHandleArgsAsync, trainingDataOption, outputDirectoryOption, expiryThresholdDateOption, fiscalYearOption, trainingListOption);
 
         // Execute the command.
         var commandLineBuilder = new CommandLineBuilder( rootCommand ).UseDefaults();
@@ -243,8 +252,8 @@ internal class Program
     public static async Task ListGraduatesForYearAsync(string outputDirectory, int fiscalYear, List<Training> specifiedTrainings)
     {
         // Define the date range for the fiscal year.
-        DateOnly fiscalYearStart = new DateOnly(fiscalYear - 1, 7, 1);
-        DateOnly fiscalYearEnd = new DateOnly(fiscalYear, 6, 30);
+        DateOnly fiscalYearStart = new DateOnly(fiscalYear - 1, FISCAL_YEAR_START_MONTH, FISCAL_YEAR_START_DAY);
+        DateOnly fiscalYearEnd = new DateOnly(fiscalYear, FISCAL_YEAR_END_MONTH, FISCAL_YEAR_END_DAY);
 
         // Prepare the output data.
         var outputData = new List<object>();
@@ -309,10 +318,16 @@ internal class Program
     /// </summary>
     /// <param name="expiryDate">The date to consider courses expired.</param>
     /// <param name="outputDirectory">Output directory.</param>
-    /// <returns></returns>
     public static async Task ListPeopleWithExpiredCoursesAsync(DateOnly expiryDate, string outputDirectory)
     {
-
+        /**
+         * for each person
+         *  for each completoin
+         *      if expiry date is expired
+         *          add training to a list of expired trainings
+         *      else if date is a month away from expiring
+         *          add training to a list of almost expired trainings
+         */
     }
 
 }
