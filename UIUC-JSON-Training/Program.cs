@@ -117,7 +117,7 @@ internal class Program
             trainingListOption
         };
 
-        // Handle the command with the OnHandleArgs function.
+        // Handle the command with the OnHandleArgsAsync function.
         rootCommand.SetHandler(OnHandleArgsAsync, trainingDataOption, outputDirectoryOption, expiryThresholdDateOption, fiscalYearOption, trainingListOption);
 
         // Execute the command.
@@ -155,6 +155,7 @@ internal class Program
             expiryDate = thresholdDate;
         }
 
+        // Give feedback in the console as to what is being processed.
         WriteInfo("Processing file: ");
         Console.WriteLine(trainingDataPath);
 
@@ -167,6 +168,7 @@ internal class Program
         WriteInfo("Fiscal year: ");
         Console.WriteLine(fiscalYear);
 
+        // The trainings specified in the commandline args.
         List<Training> specifiedTrainings = new List<Training>();
 
         // List all of the trainings.
