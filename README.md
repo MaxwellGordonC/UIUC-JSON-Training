@@ -19,6 +19,7 @@ This is a small, modular, and efficient C# application made to fulfill the follo
 - All of the input parameters can be changed using commandline arguments.
   - For simplicity, if no arguments are provided, defaults will be used.
   - Default directories (if none are provided) assume that the project is being run in Visual Studio in debug mode. The program will attempt to step back 4 levels in order to find the "input" and "output" folders.
+- This was written in .NET 8.0
  
 
 ## Command-Line Arguments
