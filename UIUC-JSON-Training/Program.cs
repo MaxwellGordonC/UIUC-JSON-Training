@@ -68,7 +68,6 @@ internal class Program
     /// Mainline. Get the commandline arguments, and then process them.
     /// </summary>
     /// <param name="args">Commandline arguments</param>
-    /// <returns></returns>
     public static async Task<int> Main(string[] args)
     {
         // Define the arguments with their descriptions.
@@ -160,7 +159,6 @@ internal class Program
             expiryDate = thresholdDate;
         }
 
-        // Give feedback in the console as to what is being processed.
         WriteInfo("Processing file: ");
         Console.WriteLine(trainingDataPath);
         
@@ -199,16 +197,13 @@ internal class Program
             // Get the JSON file as a string.
             string jsonTrainingData = File.ReadAllText(trainingDataPath);
 
-            // Configure JsonSerializerOptions for case-insensitive matching.
             var options = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
             };
 
-            // Deserialize the data and create objects to represent it.
             List<Person> people = JsonSerializer.Deserialize<List<Person>>(jsonTrainingData, options);
 
-            // Early exit for no people.
             if (people is null)
             {
                 WriteError("Error: No people found in the provided file.");
@@ -268,7 +263,6 @@ internal class Program
     /// <param name="outputDirectory">Output directory.</param>
     public static async Task ListCompletedTrainingsWithCountsAsync(List<Person> people, string outputDirectory)
     {
-        // Prepare the output data.
         List<object> outputData = new List<object>();
 
         // Iterate through the existing TrainingDict to get counts.
@@ -277,20 +271,17 @@ internal class Program
             outputData.Add(new
             {
                 Name = training.Name,
-                Count = training.GetGraduateCount(), // Directly get the count from the Training object
+                Count = training.GetGraduateCount(),
             });
         }
 
-        // Serialize the data to JSON.
         string jsonOutput = JsonSerializer.Serialize(outputData, new JsonSerializerOptions
         {
             WriteIndented = true
         });
 
-        // Define the output file path.
         string outputFilePath = Path.Combine(outputDirectory, "CompletedTrainingsWithCounts.json");
 
-        // Write the JSON to a file.
         await File.WriteAllTextAsync(outputFilePath, jsonOutput);
 
         WriteSuccess("Completed trainings written to: ");
@@ -312,10 +303,8 @@ internal class Program
         DateOnly fiscalYearStart = new DateOnly(fiscalYear - 1, FISCAL_YEAR_START_MONTH, FISCAL_YEAR_START_DAY);
         DateOnly fiscalYearEnd = new DateOnly(fiscalYear, FISCAL_YEAR_END_MONTH, FISCAL_YEAR_END_DAY);
 
-        // Prepare the output data.
         List<object> outputData = new List<object>();
 
-        // Iterate over the specified trainings.
         foreach (Training specifiedTraining in specifiedTrainings)
         {
             if (TrainingDict.TryGetValue(specifiedTraining.Name, out Training training))
@@ -351,16 +340,13 @@ internal class Program
             }
         }
 
-        // Serialize the data to JSON.
         string jsonOutput = JsonSerializer.Serialize(outputData, new JsonSerializerOptions
         {
             WriteIndented = true
         });
 
-        // Define the output file path.
         string outputFilePath = Path.Combine(outputDirectory, $"GraduatesFiscalYear.json");
 
-        // Write the file.
         await File.WriteAllTextAsync(outputFilePath, jsonOutput);
 
         WriteSuccess($"Graduate list for fiscal year {fiscalYear} written to: ");
@@ -415,7 +401,6 @@ internal class Program
     /// <param name="outputDirectory">Output directory.</param>
     public static async Task ListPeopleWithExpiredCoursesAsync(List<Person> people, DateOnly expiryDate, string outputDirectory)
     {
-        // Prepare the output data structure.
         List<object> outputData = new List<object>();
 
         // Look through each person to find expired trainings.
@@ -427,7 +412,6 @@ internal class Program
                 continue;
             }
 
-            // Create a new entry for this person.
             var personEntry = new
             {
                 Name = person.Name,
@@ -437,7 +421,6 @@ internal class Program
             // Check each completion for expiration.
             foreach (Completion completion in person.Completions)
             {
-                // Get the status.
                 ExpiryStatus status = GetExpiryStatus(completion, expiryDate);
 
                 // Ignore it if it's not expired.
@@ -446,10 +429,8 @@ internal class Program
                     continue;
                 }
 
-                // Set the message for the JSON output.
                 string expiryMessage = status == ExpiryStatus.Expired ? EXPIRED_MESSAGE : EXPIRES_SOON_MESSAGE;
 
-                // Now add it to the list.
                 personEntry.Trainings.Add(new ExpiredTraining
                 {
                     Training = completion.Name,
@@ -457,23 +438,20 @@ internal class Program
                 });
             }
 
-            // Only add the person entry if they have any trainings.
+            // Only add the person entry if they have trainings.
             if (personEntry.Trainings.Count > 0)
             {
                 outputData.Add(personEntry);
             }
         }
 
-        // Serialize the data to JSON.
         string jsonOutput = JsonSerializer.Serialize(outputData, new JsonSerializerOptions
         {
             WriteIndented = true
         });
 
-        // Define the output file path.
         string outputFilePath = Path.Combine(outputDirectory, $"ExpiredTrainings.json");
 
-        // Write the file.
         await File.WriteAllTextAsync(outputFilePath, jsonOutput);
 
         WriteSuccess($"Expired training list for {expiryDate} written to: ");
