@@ -19,3 +19,28 @@ This is a small, modular, and efficient C# application made to fulfill the follo
 - All of the input parameters can be changed using commandline arguments.
   - For simplicity, if no arguments are provided, defaults will be used.
   - Default directories (if none are provided) assume that the project is being run in Visual Studio in debug mode. The program will attempt to step back 4 levels in order to find the "input" and "output" folders.
+ 
+
+## Command-Line Arguments
+### `--trainingData`
+- **Description**: Path to the training JSON data file.
+- **Default**: If no path is provided, the default will be the `trainings.json` file located in the `input` folder relative to the execution path.
+
+### `--outputDirectory`
+- **Description**: The directory where the output data will be generated.
+- **Default**: If no directory is provided, the default will be the `output` folder relative to the execution path.
+
+### `--expiryThresholdDate`
+- **Description**: Expiration threshold date in `MM/DD/YYYY` format. Trainings that expire on or before this date will be considered for output.
+- **Default**: `10/01/2023`.
+
+### `--fiscalYear`
+- **Description**: The fiscal year that trainings have been completed in.
+- **Default**: `2024`.
+
+### `--trainingList`
+- **Description**: List of space-separated required trainings (e.g., `"Electrical Safety for Labs"` `"X-Ray Safety"`). This is the list of trainings you want to check for expiration or near expiration.
+- **Default**: `"Electrical Safety for Labs" "X-Ray Safety" "Laboratory Safety Training"`.
+
+### Usage example with custom args:
+`UIUC-JSON-Training --fiscalYear=2023 --expiryThresholdDate="11/01/2023"`
