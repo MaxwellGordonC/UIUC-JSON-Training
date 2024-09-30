@@ -10,7 +10,7 @@ internal class Program
     // Defines the start and end of a fiscal year.
     // The command arguments library used in this project
     // is limited to 8 arguments, so I opted for constants,
-    // Especially since these dates are unlikely to change.
+    // especially since these dates are unlikely to change.
     const int FISCAL_YEAR_START_MONTH = 7;
     const int FISCAL_YEAR_START_DAY = 1;
     const int FISCAL_YEAR_END_MONTH = 6;
