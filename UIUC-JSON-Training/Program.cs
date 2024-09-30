@@ -2,6 +2,7 @@
 using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Parsing;
+using System.IO;
 using System.Text;
 using System.Text.Json;
 using UIUC_JSON_Training.Classes;
@@ -39,6 +40,28 @@ internal class Program
     {
         Console.ForegroundColor = ConsoleColor.Red;
         Console.Error.WriteLine(message);
+        Console.ResetColor();
+    }
+
+    /// <summary>
+    /// Write success messages to the console with green text.
+    /// </summary>
+    /// <param name="message">Success message</param>
+    private static void WriteSuccess(string message)
+    {
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.Write(message);
+        Console.ResetColor();
+    }
+
+    /// <summary>
+    /// Write info messages to the console with yellow text.
+    /// </summary>
+    /// <param name="message">Info message</param>
+    private static void WriteInfo(string message)
+    {
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.Write(message);
         Console.ResetColor();
     }
 
@@ -134,10 +157,17 @@ internal class Program
             expiryDate = thresholdDate;
         }
 
-        Console.WriteLine($"Processing file: {trainingDataPath}");
-        Console.WriteLine($"Output directory: {outputDirectory}");
-        Console.WriteLine($"Threshold date: {expiryDate.ToShortDateString()}");
-        Console.WriteLine($"Fiscal year: {fiscalYear}");
+        WriteInfo("Processing file: ");
+        Console.WriteLine(trainingDataPath);
+
+        WriteInfo("Output directory: ");
+        Console.WriteLine(outputDirectory);
+
+        WriteInfo("Threshold date: ");
+        Console.WriteLine(expiryDate.ToShortDateString());
+
+        WriteInfo("Fiscal year: ");
+        Console.WriteLine(fiscalYear);
 
         List<Training> specifiedTrainings = new List<Training>();
 
@@ -154,7 +184,9 @@ internal class Program
                 trainingBuilder.Append(", ");
             }
         }
-        Console.WriteLine($"Trainings: {trainingBuilder.ToString()}");
+
+        WriteInfo("Trainings: ");
+        Console.WriteLine(trainingBuilder.ToString());
 
         // Parse the JSON file.
         try
@@ -171,14 +203,20 @@ internal class Program
             // Deserialize the data and create objects to represent it.
             List<Person> people = JsonSerializer.Deserialize<List<Person>>(jsonTrainingData, options);
 
+            // Early exit for no people.
             if (people is null)
             {
                 WriteError("Error: No people found in the provided file.");
                 return;
             }
 
-            // Generate the output data.
+            // Create a dictionary for trainings to avoid redundant looping.
             UpdateTrainingDictionary(people);
+
+            // Spacing for the console output.
+            Console.WriteLine();
+
+            // Generate the output data.
             await ListCompletedTrainingsWithCountsAsync(people, outputDirectory);
             await ListGraduatesForYearAsync(outputDirectory, fiscalYear, specifiedTrainings);
             await ListPeopleWithExpiredCoursesAsync(people, expiryDate, outputDirectory);
@@ -250,7 +288,9 @@ internal class Program
         // Write the JSON to a file.
         await File.WriteAllTextAsync(outputFilePath, jsonOutput);
 
-        Console.WriteLine($"Output written to: {outputFilePath}");
+        WriteSuccess("Completed trainings written to: ");
+        Console.WriteLine(outputFilePath);
+        Console.WriteLine();
     }
 
     /// <summary>
@@ -313,12 +353,14 @@ internal class Program
         });
 
         // Define the output file path.
-        string outputFilePath = Path.Combine(outputDirectory, $"GraduatesFiscalYear{fiscalYear}.json");
+        string outputFilePath = Path.Combine(outputDirectory, $"GraduatesFiscalYear.json");
 
         // Write the file.
         await File.WriteAllTextAsync(outputFilePath, jsonOutput);
 
-        Console.WriteLine($"Graduate list for fiscal year {fiscalYear} written to: {outputFilePath}");
+        WriteSuccess($"Graduate list for fiscal year {fiscalYear} written to: ");
+        Console.WriteLine(outputFilePath);
+        Console.WriteLine();
     }
 
 
@@ -424,11 +466,13 @@ internal class Program
         });
 
         // Define the output file path.
-        string outputFilePath = Path.Combine(outputDirectory, $"ExpiredTrainings{expiryDate.Month}_{expiryDate.Day}_{expiryDate.Year}.json");
+        string outputFilePath = Path.Combine(outputDirectory, $"ExpiredTrainings.json");
 
         // Write the file.
         await File.WriteAllTextAsync(outputFilePath, jsonOutput);
 
-        Console.WriteLine($"Expired training list for {expiryDate} written to: {outputFilePath}");
+        WriteSuccess($"Expired training list for {expiryDate} written to: ");
+        Console.WriteLine(outputFilePath);
+        Console.WriteLine();
     }
 }
